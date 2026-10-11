@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
+import android.view.HapticFeedbackConstants
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
@@ -13,21 +14,36 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 
 /**
- * 浮层底下那条控制栏。
+ * 浮层底部的控制栏。
  *
- * 单独开一个窗口，因为选点层大部分时间是穿透的（不接收触摸），按钮得留在另一个窗口里
- * 才能一直点得到 —— 特别是【退出】。就算选点层卡住了，这个按钮也能点。
+ * ## 排版是按拇指操作来定的
  *
- * 按状态只显示该显示的按钮：
+ * 几条定下来的规矩：
  *
- *   待机    -> [选点] [校准] [退出]
- *   点起点  -> "点一下棋子"            + [重选] [退出]
- *   调起点  -> "滑动微调，好了点确定"   + [确定] [重选] [退出]
- *   点终点  -> "点一下目标方块"        + [重选] [退出]
- *   调终点  -> "滑动微调，好了点确定"   + [确定] [重选] [退出]
- *   就绪    -> 距离和时长              + [跳] [重选] [退出]
+ * 1. **主操作永远在右边**。右手握机时拇指从右下扫过来最容易够到，也是 Material 的惯例。
+ *    主按钮（确定 / 跳）位置固定不动，只换文字，用两三次就形成肌肉记忆。
  *
- * 【跳】只有两个点都确定了才出现；没确定之前是隐藏的，免得乱点就跳出去。
+ * 2. **次要操作永远在左边同样的位置**。重选和退出每个状态下都在原处，不会跳来跳去。
+ *    最早那版按钮忽隐忽现、位置乱换，每次都得重新找，用着别扭。
+ *
+ * 3. **一次最多三个按钮**，按状态只放需要的。
+ *
+ * 4. **主按钮 52dp 高**。Android 建议最小触控区 48dp，主操作再大一点，闭着眼也能按到。
+ *    次要按钮做小做淡，不跟它抢。
+ *
+ * 5. **信息分两级**。上面一行小字说现在该干嘛，下面一行大字是你要的结果（距离和时长）。
+ *
+ * 6. **按下去有振动**，不用看屏幕也能确认点上了。
+ *
+ * ## 为什么是单独一个窗口
+ *
+ * 选点层大部分时间是穿透的（不接收触摸），按钮得留在另一个窗口才能一直点得到 ——
+ * 尤其是退出。就算选点层卡住了，这里的按钮照样能点。
+ *
+ * ## 布局结构（从左到右）
+ *
+ *     [重选] [退出]        <弹性空白>        [主操作]
+ *     ↑ 位置固定            ↑ 把主操作推到右边   ↑ 拇指区
  */
 @SuppressLint("ViewConstructor")
 class ControlPanel(
@@ -53,36 +69,43 @@ class ControlPanel(
     private val tvCoeff: TextView
     private val rowButtons: LinearLayout
 
+    // 左边：次要操作，位置永远不变
+    private val btnReset: Button
+    private val btnHide: Button
+    // 待机时才有：两个入口
     private val btnPick: Button
     private val btnCalibrate: Button
-    private val btnConfirm: Button
-    private val btnJump: Button
-    private val btnReset: Button
+    // 右边：主操作，只换文字不换位置
+    private val btnPrimary: Button
+
+    /** 主操作当前的行为 */
+    private var primaryAction: () -> Unit = {}
 
     private fun col(id: Int) = ContextCompat.getColor(context, id)
 
     init {
         orientation = VERTICAL
         background = GradientDrawable().apply {
-            cornerRadius = 18f * density
+            cornerRadius = 20f * density
             setColor(col(R.color.surface))
             setStroke((1f * density).toInt(), col(R.color.stroke))
         }
-        val px = (16 * density).toInt()
-        setPadding(px, (12 * density).toInt(), px, (12 * density).toInt())
+        val h = (18 * density).toInt()
+        setPadding(h, (14 * density).toInt(), h, (14 * density).toInt())
 
+        // ---- 信息区：小字说明 + 大字结果 ----
         tvStatus = TextView(context).apply {
-            setTextColor(col(R.color.text))
-            textSize = 13.5f
+            setTextColor(col(R.color.text_dim))
+            textSize = 12.5f
             letterSpacing = 0.01f
         }
         addView(tvStatus)
 
         tvReadout = TextView(context).apply {
             setTextColor(col(R.color.accent))
-            textSize = 16f
-            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.NORMAL)
-            setPadding(0, (6 * density).toInt(), 0, 0)
+            textSize = 21f
+            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+            setPadding(0, (7 * density).toInt(), 0, 0)
         }
         addView(tvReadout)
 
@@ -93,59 +116,136 @@ class ControlPanel(
         }
         addView(tvCoeff)
 
+        // ---- 按钮区 ----
         rowButtons = LinearLayout(context).apply {
             orientation = HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, (10 * density).toInt(), 0, 0)
+            setPadding(0, (14 * density).toInt(), 0, 0)
         }
         addView(rowButtons)
 
-        btnPick = makeButton(R.string.btn_pick, R.drawable.bg_btn_accent, R.color.accent) { listener?.onStartPicking() }
-        btnCalibrate = makeButton(R.string.btn_calibrate, R.drawable.bg_btn, R.color.warn) { listener?.onStartCalibration() }
-        btnConfirm = makeButton(R.string.btn_confirm, R.drawable.bg_btn_accent, R.color.accent) { listener?.onConfirm() }
-        btnJump = makeButton(R.string.btn_jump, R.drawable.bg_btn_accent, R.color.ok) { listener?.onJump() }
-        btnReset = makeButton(R.string.btn_again, R.drawable.bg_btn, R.color.text_dim) { listener?.onReset() }
-        val btnHide = makeButton(R.string.btn_hide, R.drawable.bg_btn_danger, R.color.bad) { listener?.onHide() }
+        // 建一次，之后只切 visibility
+        btnReset = secondaryButton(R.string.btn_again) { listener?.onReset() }
+        btnHide = secondaryButton(R.string.btn_hide) { listener?.onHide() }
+        btnPick = primaryButton { listener?.onStartPicking() }
+        btnCalibrate = secondaryButton(R.string.btn_calibrate) { listener?.onStartCalibration() }
+        btnPrimary = primaryButton { primaryAction() }
+        btnPick.setText(R.string.btn_pick)
+        btnPrimary.setText(R.string.btn_confirm)
 
-        rowButtons.addView(btnPick)
-        rowButtons.addView(btnCalibrate)
-        rowButtons.addView(btnConfirm)
-        rowButtons.addView(btnJump)
+        // 左边两个
         rowButtons.addView(btnReset)
         rowButtons.addView(btnHide)
+        // 待机入口（默认隐藏）
+        rowButtons.addView(btnPick)
+        rowButtons.addView(btnCalibrate)
+        // 弹性空白：把主操作顶到最右边
+        rowButtons.addView(View(context).apply {
+            layoutParams = LayoutParams(0, 1).apply { weight = 1f }
+        })
+        // 主操作
+        rowButtons.addView(btnPrimary)
 
         renderIdle()
     }
 
-    private fun makeButton(textRes: Int, bgRes: Int, textColorRes: Int, onClick: () -> Unit): Button =
+    // ---------------------------------------------------------------- 按钮工厂
+
+    /** 主操作：大、亮、带描边。上下内边距 16dp + 16sp 字 ≈ 52dp 高。 */
+    private fun primaryButton(onClick: () -> Unit): Button =
+        Button(context).apply {
+            textSize = 16f
+            isAllCaps = false
+            letterSpacing = 0.04f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            minWidth = 0; minimumWidth = 0
+            minHeight = 0; minimumHeight = 0
+            setTextColor(col(R.color.accent))
+            background = ContextCompat.getDrawable(context, R.drawable.bg_btn_accent)
+            val px = (26 * density).toInt()
+            val py = (16 * density).toInt()
+            setPadding(px, py, px, py)
+            setOnClickListener {
+                performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                onClick()
+            }
+            layoutParams = LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+    /** 次要操作：小、淡，不抢注意力。但高度也保证 48dp，够手指点。 */
+    private fun secondaryButton(textRes: Int, onClick: () -> Unit): Button =
         Button(context).apply {
             text = context.getString(textRes)
-            textSize = 14f
+            textSize = 13f
             isAllCaps = false
             letterSpacing = 0.02f
             minWidth = 0; minimumWidth = 0
             minHeight = 0; minimumHeight = 0
-            setTextColor(col(textColorRes))
-            background = ContextCompat.getDrawable(context, bgRes)
-            setPadding((16 * density).toInt(), (9 * density).toInt(), (16 * density).toInt(), (9 * density).toInt())
-            setOnClickListener { onClick() }
+            setTextColor(col(R.color.text_dim))
+            background = ContextCompat.getDrawable(context, R.drawable.bg_btn)
+            val px = (16 * density).toInt()
+            val py = (12 * density).toInt()
+            setPadding(px, py, px, py)
+            // 触控区不小于 48dp（Android 的建议值），主按钮靠更大的内边距显得更醒目
+            minimumHeight = (48 * density).toInt()
+            setOnClickListener {
+                // 次要操作用更轻的一下，和主操作区分开
+                performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                onClick()
+            }
             layoutParams = LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { marginEnd = (7 * density).toInt() }
+            ).apply { marginEnd = (8 * density).toInt() }
         }
 
-    // ---------------------------------------------------------------- 各种状态
+    // ---------------------------------------------------------------- 显隐
 
+    /** 左边两个次要操作，位置固定，只切显隐 */
+    private fun showSecondary(show: Boolean) {
+        val v = if (show) View.VISIBLE else View.GONE
+        btnReset.visibility = v
+        btnHide.visibility = v
+    }
+
+    /** 待机那两个入口 */
+    private fun showIdleEntries(show: Boolean) {
+        val v = if (show) View.VISIBLE else View.GONE
+        btnPick.visibility = v
+        btnCalibrate.visibility = v
+    }
+
+    /** 主操作：换文字和绑定的动作，位置不动 */
+    private fun setPrimary(labelRes: Int, action: () -> Unit) {
+        btnPrimary.setText(labelRes)
+        btnPrimary.isEnabled = true
+        btnPrimary.alpha = 1f
+        btnPrimary.visibility = View.VISIBLE
+        primaryAction = action
+    }
+
+    private fun hidePrimary() {
+        btnPrimary.visibility = View.GONE
+    }
+
+    // ---------------------------------------------------------------- 各状态
+
+    /** 待机：左边给两个入口，右边还没有可确定的东西 */
     fun renderIdle() {
         tvStatus.setText(R.string.ov_idle_hint)
         tvReadout.text = dashReadout()
-        show(pick = true, calibrate = true, confirm = false, jump = false, reset = false)
+        showSecondary(false)
+        showIdleEntries(true)
+        hidePrimary()
         refreshCoeff()
     }
 
-    /** 还没点，等用户粗选一个点。 */
+    /** 等用户点一下（粗选），此时没有可确定的东西 */
     fun renderAwaitingTap(stage: SelectionCanvas.Stage) {
+        showIdleEntries(false)
         tvStatus.setText(
             when (stage) {
                 SelectionCanvas.Stage.START -> R.string.ov_pick_start
@@ -154,12 +254,14 @@ class ControlPanel(
             }
         )
         tvReadout.text = dashReadout()
-        show(pick = false, calibrate = false, confirm = false, jump = false, reset = true)
+        showSecondary(true)
+        hidePrimary()
         refreshCoeff()
     }
 
-    /** 粗选好了，等微调和确定。 */
+    /** 点过了，正在微调：主操作变【确定】 */
     fun renderAdjusting(stage: SelectionCanvas.Stage) {
+        showIdleEntries(false)
         tvStatus.setText(
             when (stage) {
                 SelectionCanvas.Stage.START -> R.string.ov_adjust_start
@@ -168,50 +270,46 @@ class ControlPanel(
             }
         )
         tvReadout.text = dashReadout()
-        show(pick = false, calibrate = false, confirm = true, jump = false, reset = true)
+        showSecondary(true)
+        setPrimary(R.string.btn_confirm) { listener?.onConfirm() }
         refreshCoeff()
     }
 
-    /** 两个点都确定了，可以跳。 */
+    /** 两个点都定了：主操作变【跳】 */
     fun renderReady(start: JumpCalculator.Point?, end: JumpCalculator.Point?) {
+        showIdleEntries(false)
         tvStatus.setText(R.string.ov_ready)
         tvReadout.text = readoutFor(start, end)
-        show(pick = false, calibrate = false, confirm = false, jump = true, reset = true)
-        btnJump.isEnabled = true
+        showSecondary(true)
+        setPrimary(R.string.btn_jump) { listener?.onJump() }
         refreshCoeff()
     }
 
     fun renderCalibrationIntro() {
+        showIdleEntries(false)
         tvStatus.setText(R.string.cal_short)
         tvReadout.text = dashReadout()
-        show(pick = false, calibrate = false, confirm = false, jump = false, reset = true)
+        showSecondary(true)
+        hidePrimary()
         refreshCoeff()
     }
 
     fun renderBusy() {
         tvStatus.setText(R.string.ov_jumping)
-        btnJump.isEnabled = false
+        btnPrimary.isEnabled = false
+        btnPrimary.alpha = 0.4f
     }
 
     fun renderMessage(message: String) {
         tvStatus.text = message
-        btnJump.isEnabled = false
-    }
-
-    private fun show(
-        pick: Boolean, calibrate: Boolean, confirm: Boolean, jump: Boolean, reset: Boolean
-    ) {
-        btnPick.visibility = if (pick) View.VISIBLE else View.GONE
-        btnCalibrate.visibility = if (calibrate) View.VISIBLE else View.GONE
-        btnConfirm.visibility = if (confirm) View.VISIBLE else View.GONE
-        btnJump.visibility = if (jump) View.VISIBLE else View.GONE
-        btnReset.visibility = if (reset) View.VISIBLE else View.GONE
+        btnPrimary.isEnabled = false
+        btnPrimary.alpha = 0.4f
     }
 
     // ---------------------------------------------------------------- 文字
 
     private fun dashReadout(): String =
-        "${context.getString(R.string.ov_distance)} —    ${context.getString(R.string.ov_duration)} —"
+        "${context.getString(R.string.ov_distance)} —   ${context.getString(R.string.ov_duration)} —"
 
     private fun readoutFor(start: JumpCalculator.Point?, end: JumpCalculator.Point?): String {
         val dist = JumpCalculator.distancePx(start, end)
@@ -224,7 +322,7 @@ class ControlPanel(
         }
         val ms = JumpCalculator.durationMs(dist, store.coefficient, maxMs)
         return "${dist.toInt()} ${context.getString(R.string.ov_unit_px)}" +
-            "   ·   $ms ${context.getString(R.string.ov_unit_ms)}"
+            "   ${ms} ${context.getString(R.string.ov_unit_ms)}"
     }
 
     fun refreshCoeff() {

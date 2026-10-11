@@ -164,8 +164,9 @@ class JumpAccessibilityService : AccessibilityService() {
                 PixelFormat.TRANSLUCENT
             ).apply {
                 gravity = Gravity.BOTTOM
-                // 刚好落在手势导航条上面。窗口做得越小，能挡到游戏的地方就越少。
-                y = (90 * resources.displayMetrics.density).toInt()
+                // 贴着底部导航条上方，离底边越近拇指越顺手。
+                // 窗口做得越小，能挡到游戏的地方就越少。
+                y = (64 * resources.displayMetrics.density).toInt()
             }
 
             windowManager.addView(c, cParams)
