@@ -10,7 +10,7 @@
         <item name="android:colorBackground">@color/bg</item>
     </style>
 
-    <!-- Flat, quiet button: no elevation, one accent outline, generous horizontal padding. -->
+    <!-- 扁平的按钮：不要立体感和阴影，一个强调色描边，左右留够间距 -->
     <style name="Widget.JumpA11y.Button" parent="Widget.AppCompat.Button.Borderless">
         <item name="android:textSize">14sp</item>
         <item name="android:textColor">@color/text</item>

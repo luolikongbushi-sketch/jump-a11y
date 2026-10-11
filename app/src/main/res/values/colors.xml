@@ -1,31 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Minimal dark palette.
+  暗色配色。
 
-  Rules followed:
-   - one accent hue (soft cyan) carries all interactive meaning
-   - text uses a three-step ramp instead of many greys, so hierarchy reads at a glance
-   - status colours are muted rather than saturated, to keep the dark surface calm
+  几条自己定的规则：
+   - 只用一种强调色（柔和的青），所有能点的东西都用它，不混别的色
+   - 文字分三级而不是一堆灰，层级一眼能看出来
+   - 状态色压低饱和度，免得在暗色底上跳出来刺眼
 -->
 <resources>
-    <!-- surfaces -->
-    <color name="bg">#FF0B0E13</color>          <!-- app background -->
-    <color name="surface">#FF141A22</color>     <!-- cards, panel -->
-    <color name="surface_hi">#FF1C232D</color>  <!-- inputs, subtle fills -->
-    <color name="stroke">#FF232C38</color>      <!-- 1dp hairlines -->
+    <!-- 背景层 -->
+    <color name="bg">#FF0B0E13</color>          <!-- 应用背景 -->
+    <color name="surface">#FF141A22</color>     <!-- 卡片、面板 -->
+    <color name="surface_hi">#FF1C232D</color>  <!-- 输入框等 -->
+    <color name="stroke">#FF232C38</color>      <!-- 1dp 分隔线 -->
 
-    <!-- text ramp -->
-    <color name="text">#FFE6EDF3</color>        <!-- primary -->
-    <color name="text_dim">#FF8B98A5</color>    <!-- secondary -->
-    <color name="text_faint">#FF5C6773</color>  <!-- hints, captions -->
+    <!-- 文字三级 -->
+    <color name="text">#FFE6EDF3</color>        <!-- 主要 -->
+    <color name="text_dim">#FF8B98A5</color>    <!-- 次要 -->
+    <color name="text_faint">#FF5C6773</color>  <!-- 提示、说明 -->
 
-    <!-- accent + status (muted on purpose) -->
+    <!-- 强调色和状态色 -->
     <color name="accent">#FF6EE7F5</color>
     <color name="ok">#FF7BE0A8</color>
     <color name="warn">#FFF5C97F</color>
     <color name="bad">#FFF5857F</color>
 
-    <!-- overlay markers -->
+    <!-- 浮层上的标记 -->
     <color name="marker_start">#FF6EE7F5</color>
     <color name="marker_end">#FFF5A97F</color>
     <color name="marker_landing">#FF7BE0A8</color>
