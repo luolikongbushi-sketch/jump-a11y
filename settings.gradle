@@ -1,0 +1,30 @@
+// 仓库顺序在国内网络下有讲究，别随便调。
+//
+// 实测：dl.google.com 经常直接被重置（0.2 秒就失败），repo1.maven.org 时好时坏，
+// 阿里云的镜像基本都能连上。Gradle 是按顺序找仓库、失败了还会带长超时重试的，
+// 把不可靠的放前面，构建就会卡几十分钟像是死了。
+// 所以阿里云放前面，官方的留着兜底。
+
+pluginManagement {
+    repositories {
+        maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        maven { url 'https://maven.aliyun.com/repository/public' }
+        gradlePluginPortal()
+        google()
+        mavenCentral()
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+    repositories {
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        maven { url 'https://maven.aliyun.com/repository/public' }
+        mavenCentral()
+        google()
+    }
+}
+
+rootProject.name = 'JumpA11y'
+include ':app'
