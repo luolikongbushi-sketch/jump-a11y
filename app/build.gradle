@@ -11,8 +11,8 @@ android {
         applicationId "cn.imrhj.jumpa11y"
         minSdk 24
         targetSdk 34
-        versionCode 8
-        versionName "0.6.1"
+        versionCode 9
+        versionName "0.6.2"
     }
 
     buildTypes {
@@ -22,7 +22,7 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            // release 也用 debug 签名，这样 assembleRelease 出来的包能直接装上试
+            // release 涔熺敤 debug 绛惧悕锛岃繖鏍?assembleRelease 鍑烘潵鐨勫寘鑳界洿鎺ヨ涓婅瘯
             signingConfig signingConfigs.debug
         }
     }
