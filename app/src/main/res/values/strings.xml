@@ -2,7 +2,7 @@
 <resources>
     <string name="app_name">跳一跳助手</string>
     <string name="service_label">跳一跳助手 · 手势服务</string>
-    <string name="service_description">按你选定的两个点（起点、终点）注入一次按压手势来控制跳跃距离。不读取屏幕内容，不联网，不需要 Root。</string>
+    <string name="service_description">按你选定的起点和终点注入一次按压手势来控制跳跃距离。不读取屏幕内容，不联网，不需要 Root。</string>
 
     <!-- ==================== 主界面 ==================== -->
     <string name="main_title">跳一跳助手</string>
@@ -15,30 +15,39 @@
 
     <string name="btn_open_settings">去开启无障碍服务</string>
     <string name="btn_show_overlay">显示浮层</string>
-    <string name="btn_close">退出</string>
 
-    <string name="main_howto_title">使用步骤</string>
-    <string name="main_howto_body">1. 打开微信「跳一跳」，停在等待按压的状态\n2. 切回本应用，点「显示浮层」\n3. 点浮层上的【选点】，然后：\n     · 先点一下棋子（起点）\n     · 再点一下目标方块（终点）\n4. 点【跳】，程序会自动完成这次按压\n5. 跳完浮层自动复位，重复第 3 步</string>
+    <string name="main_howto_title">怎么用</string>
+    <string name="main_howto_body">1. 打开微信「跳一跳」，停在等人按的状态\n2. 切回本应用，点「显示浮层」\n3. 点浮层上的【选点】，先点一下棋子：\n     · 手指点哪，起点就落在哪\n     · 松手后可以直接在屏幕上滑，起点跟着滑，调到准为止\n     · 调好了点【确定】\n4. 终点同样：先点一下目标方块，再滑动微调，再【确定】\n5. 点【跳】</string>
 
-    <string name="main_param_title">参数</string>
-    <string name="main_coeff_label">按压系数（毫秒/像素）：</string>
-    <string name="main_coeff_hint">1080 宽屏建议 1.39；跳不到位就微调</string>
+    <string name="main_param_title">按压系数</string>
+    <string name="main_coeff_label">系数（毫秒/像素）：</string>
+    <string name="main_coeff_hint">1080 宽的屏一般是 1.39 左右，跳不到位就微调</string>
     <string name="btn_save">保存</string>
     <string name="btn_reset_default">恢复默认</string>
-    <string name="main_param_saved">参数已保存</string>
+    <string name="main_param_saved">已保存</string>
     <string name="main_param_bad">请输入 0.2 ~ 5 之间的数字</string>
 
-    <string name="main_device_title">关于按压系数（重要）</string>
-    <string name="main_device_body">系数 = 每像素需要按住的毫秒数，它决定了跳多远。\n\n默认 1.392 是按 1080 宽屏的实测值预设的，属于「通用但不精确」。\n\n**推荐做法：让程序自己测出来**\n点浮层上的【校准】，按提示做一次：\n  点起点 → 点终点 → 点【跳】→ 点棋子实际停下的位置\n程序会立刻算出你这台机器的真实系数并永久保存。\n这样就跟分辨率完全无关了，换屏幕、换设备重测一次即可。\n\n跳得偏短就把系数调大，偏长就调小，每次改 0.02~0.05。</string>
+    <string name="main_device_title">不用自己算系数</string>
+    <string name="main_device_body">不同机器、不同分辨率下"按多久跳多远"是不一样的，所以有个【校准】：\n\n点【校准】→ 选起点和终点 → 点【跳】跳一次 → 点一下棋子实际停在哪\n\n程序会拿这次实际跳出来的距离跟目标的距离一比，直接算出你这台机器真正的系数，存下来。做一次就行。</string>
+
+    <string name="main_theme_title">主题</string>
+    <string name="main_theme_label">外观</string>
+    <string name="main_theme_light">浅色</string>
+    <string name="main_theme_dark">深色</string>
 
     <string name="main_warn_title">说明</string>
-    <string name="main_warn_body">· 半自动：每次需要你点两个点\n· 仅在你授权无障碍服务后工作，可随时关闭\n· 不申请网络权限，无法上传任何数据\n· 不读取屏幕像素，不做任何截图</string>
+    <string name="main_warn_body">· 半自动：每次需要你选两个点\n· 只在你开了无障碍之后才工作，随时可以关\n· 没有联网权限，传不了任何数据\n· 不读屏幕内容，也没有截图功能</string>
 
-    <!-- 浮层 -->
-    <string name="ov_idle_hint">点「选点」开始：先点起点，再点终点</string>
-    <string name="ov_step_start">点一下棋子（起点），按住可拖动</string>
-    <string name="ov_step_end">点一下目标方块（终点），按住可拖动</string>
-    <string name="ov_ready">已就绪</string>
+    <!-- ==================== 浮层 ==================== -->
+    <string name="ov_idle_hint">点【选点】开始</string>
+    <string name="ov_pick_start">点一下棋子（起点）</string>
+    <string name="ov_pick_end">点一下目标方块（终点）</string>
+    <string name="ov_adjust_start">滑动微调起点，好了点【确定】</string>
+    <string name="ov_adjust_end">滑动微调终点，好了点【确定】</string>
+    <string name="ov_adjust_landing">滑动微调，标出棋子实际停在哪</string>
+    <string name="ov_adjusting">微调中</string>
+    <string name="ov_ready">已就绪，点【跳】</string>
+
     <string name="ov_label_start">起点</string>
     <string name="ov_label_end">终点</string>
     <string name="ov_label_landing">实际落点</string>
@@ -49,27 +58,25 @@
     <string name="ov_unit_ms">ms</string>
 
     <string name="btn_pick">选点</string>
+    <string name="btn_confirm">确定</string>
     <string name="btn_jump">跳</string>
     <string name="btn_again">重选</string>
     <string name="btn_hide">退出浮层</string>
-    <string name="btn_minus">－</string>
-    <string name="btn_plus">＋</string>
     <string name="btn_calibrate">校准</string>
 
     <!-- 校准流程 -->
-    <string name="cal_short">校准：点起点 → 点终点 → 跳 → 点落点</string>
-    <string name="cal_intro">校准：先点起点和终点，点【跳】跳一次，再点棋子实际停下的位置，程序会自动算出你这台机器的真实系数</string>
-    <string name="cal_step_landing">点一下棋子现在实际停在哪（落点）</string>
+    <string name="cal_short">先选起点和终点，然后点【跳】</string>
+    <string name="cal_step_landing">点一下棋子实际停在哪，再【确定】</string>
     <string name="cal_applied">校准完成：系数 %1$s → %2$s（比例 %3$s）\n现在再跳就会准很多</string>
-    <string name="cal_jump_too_short">没测到有效距离：棋子几乎没动或点得太近，请重试</string>
-    <string name="cal_ratio_bad">比例超出合理范围（%1$s），可能是点错位置了，请重试</string>
-    <string name="cal_clamped">算出的系数超出允许范围，已放弃本次校准，请重试</string>
-    <string name="cal_failed_inject">注入失败，无法校准，请确认无障碍服务已启用</string>
+    <string name="cal_jump_too_short">没测到有效距离：棋子几乎没动或点得太近，重试一次</string>
+    <string name="cal_ratio_bad">比例超出合理范围（%1$s），可能是点错位置了，重试一次</string>
+    <string name="cal_failed_inject">注入失败，没法校准。确认无障碍服务开着</string>
 
+    <!-- 其它提示 -->
     <string name="ov_jumping">正在跳…</string>
-    <string name="ov_fail">注入失败，请确认无障碍服务已启用</string>
-    <string name="ov_too_close">两点太近了，请重新选</string>
-    <string name="ov_hidden">浮层已收起</string>
+    <string name="ov_fail">注入失败，确认无障碍服务开着</string>
+    <string name="ov_too_close">两点太近了，重新选</string>
     <string name="ov_shown">浮层已显示，切回游戏点【选点】</string>
-    <string name="ov_not_ready">服务还没连接好，请稍候再试</string>
+    <string name="ov_not_ready">服务还没连上，等两秒再试</string>
+    <string name="ov_hide_first">先把正在调的点确定或重选</string>
 </resources>

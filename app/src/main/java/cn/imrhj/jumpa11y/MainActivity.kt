@@ -20,7 +20,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 
 /**
- * 主界面。就干三件事：看服务开没开、开浮层、调系数。
+ * 主界面。就干几件事：看服务开没开、开浮层、调系数、换主题。
  *
  * 浮层不在这个 Activity 里，在 [JumpAccessibilityService] 里。Activity 没法直接操作
  * 无障碍服务，所以两边靠 [JumpAccessibilityService.overlayRequested] 这个标记传话。
@@ -32,8 +32,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var statusText: TextView
     private lateinit var statusHint: TextView
     private lateinit var btnShowOverlay: Button
+    private lateinit var btnLight: Button
+    private lateinit var btnDark: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // 主题必须在建界面之前定好，不然会闪一下旧配色
+        ThemeSettings.applyStored(this)
         super.onCreate(savedInstanceState)
         store = CalibrationStore(this)
         setContentView(buildUi())
@@ -100,6 +104,24 @@ class MainActivity : AppCompatActivity() {
         minHeight = 0; minimumHeight = 0
         setTextColor(col(R.color.text_dim))
         background = ContextCompat.getDrawable(this@MainActivity, R.drawable.bg_btn)
+        setPadding(dp(16), dp(11), dp(16), dp(11))
+        setOnClickListener { onClick() }
+        layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+            .apply { marginEnd = dp(10) }
+    }
+
+    /** 主题那两个按钮：选中的用强调色，没选的用普通样式。 */
+    private fun themeButton(resId: Int, selected: Boolean, onClick: () -> Unit) = Button(this).apply {
+        text = getString(resId)
+        textSize = 14f
+        isAllCaps = false
+        letterSpacing = 0.02f
+        minHeight = 0; minimumHeight = 0
+        setTextColor(col(if (selected) R.color.accent else R.color.text_dim))
+        background = ContextCompat.getDrawable(
+            this@MainActivity,
+            if (selected) R.drawable.bg_btn_accent else R.drawable.bg_btn
+        )
         setPadding(dp(16), dp(11), dp(16), dp(11))
         setOnClickListener { onClick() }
         layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
@@ -209,9 +231,23 @@ class MainActivity : AppCompatActivity() {
 
         root.addView(hairline())
 
-        // ---- 校准说明 ----
+        // ---- 校准 ----
         root.addView(sectionTitle(R.string.main_device_title))
         root.addView(body(getString(R.string.main_device_body)))
+
+        root.addView(hairline())
+
+        // ---- 主题 ----
+        root.addView(sectionTitle(R.string.main_theme_title))
+        val themeRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+        }
+        val dark = ThemeSettings.isDark(this)
+        btnLight = themeButton(R.string.main_theme_light, !dark) { switchTheme(false) }
+        btnDark = themeButton(R.string.main_theme_dark, dark) { switchTheme(true) }
+        themeRow.addView(btnLight)
+        themeRow.addView(btnDark)
+        root.addView(themeRow)
 
         root.addView(hairline())
 
@@ -235,6 +271,14 @@ class MainActivity : AppCompatActivity() {
         statusDot.background?.setTint(col(if (on) R.color.ok else R.color.bad))
         btnShowOverlay.isEnabled = on
         btnShowOverlay.alpha = if (on) 1f else 0.45f
+    }
+
+    /**
+     * 换主题。setDefaultNightMode 会让 Activity 重建，所以这里不用手动重画界面。
+     */
+    private fun switchTheme(dark: Boolean) {
+        if (ThemeSettings.isDark(this) == dark) return
+        ThemeSettings.setDark(this, dark)
     }
 
     private fun requestOverlay() {

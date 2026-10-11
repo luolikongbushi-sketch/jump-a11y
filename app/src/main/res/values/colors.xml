@@ -1,32 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  暗色配色。
+  浅色主题（默认）。
 
-  几条自己定的规则：
-   - 只用一种强调色（柔和的青），所有能点的东西都用它，不混别的色
-   - 文字分三级而不是一堆灰，层级一眼能看出来
-   - 状态色压低饱和度，免得在暗色底上跳出来刺眼
+  换主题的原理：这里定义的是"调色板"，深色版本放在 values-night/ 里，文件名和颜色名
+  完全一样。系统按当前是浅色还是深色去挑一套，代码里只用 @color/xxx，不用管换没换。
+
+  overlay_ 开头那几个是浮层用的：浮层画在游戏画面上面，跟应用本身的主题关系不大，
+  只保证在游戏画面上看得清就行。
 -->
 <resources>
     <!-- 背景层 -->
-    <color name="bg">#FF0B0E13</color>          <!-- 应用背景 -->
-    <color name="surface">#FF141A22</color>     <!-- 卡片、面板 -->
-    <color name="surface_hi">#FF1C232D</color>  <!-- 输入框等 -->
-    <color name="stroke">#FF232C38</color>      <!-- 1dp 分隔线 -->
+    <color name="bg">#FFF6F7F9</color>
+    <color name="surface">#FFFFFFFF</color>
+    <color name="surface_hi">#FFF1F3F6</color>
+    <color name="stroke">#FFE2E6EC</color>
 
     <!-- 文字三级 -->
-    <color name="text">#FFE6EDF3</color>        <!-- 主要 -->
-    <color name="text_dim">#FF8B98A5</color>    <!-- 次要 -->
-    <color name="text_faint">#FF5C6773</color>  <!-- 提示、说明 -->
+    <color name="text">#FF1A1D21</color>
+    <color name="text_dim">#FF5C6672</color>
+    <color name="text_faint">#FF98A1AC</color>
 
-    <!-- 强调色和状态色 -->
-    <color name="accent">#FF6EE7F5</color>
-    <color name="ok">#FF7BE0A8</color>
-    <color name="warn">#FFF5C97F</color>
-    <color name="bad">#FFF5857F</color>
+    <!-- 强调色和状态色。浅底上要压深一点才看得清 -->
+    <color name="accent">#FF0E8FA6</color>
+    <color name="accent_soft">#1A0E8FA6</color>
+    <color name="accent_line">#590E8FA6</color>
+    <color name="ok">#FF2E9E63</color>
+    <color name="warn">#FFB07A16</color>
+    <color name="bad">#FFD1453B</color>
+    <color name="bad_soft">#14D1453B</color>
+    <color name="bad_line">#59D1453B</color>
 
-    <!-- 浮层上的标记 -->
-    <color name="marker_start">#FF6EE7F5</color>
-    <color name="marker_end">#FFF5A97F</color>
-    <color name="marker_landing">#FF7BE0A8</color>
+    <!-- 按钮按下时的高亮 -->
+    <color name="ripple">#14000000</color>
+
+    <!-- 浮层专用 -->
+    <color name="overlay_scrim">#0F000000</color>
+    <color name="overlay_label">#FF10161D</color>
+    <color name="overlay_label_shadow">#66FFFFFF</color>
+    <color name="overlay_halo">#99000000</color>
+    <color name="marker_start">#FF0E8FA6</color>
+    <color name="marker_end">#FFD9662E</color>
+    <color name="marker_landing">#FF2E9E63</color>
 </resources>

@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!--
+      DayNight 会让 Android 按当前是浅色还是深色自动挑 values/ 或 values-night/ 里的颜色，
+      这里就不用写两套 style 了。
+    -->
     <style name="Theme.JumpA11y" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="android:windowBackground">@color/bg</item>
         <item name="android:textColorPrimary">@color/text</item>
@@ -8,23 +12,6 @@
         <item name="colorAccent">@color/accent</item>
         <item name="colorControlActivated">@color/accent</item>
         <item name="android:colorBackground">@color/bg</item>
-    </style>
-
-    <!-- 扁平的按钮：不要立体感和阴影，一个强调色描边，左右留够间距 -->
-    <style name="Widget.JumpA11y.Button" parent="Widget.AppCompat.Button.Borderless">
-        <item name="android:textSize">14sp</item>
-        <item name="android:textColor">@color/text</item>
-        <item name="android:letterSpacing">0.02</item>
-        <item name="android:minWidth">0dp</item>
-        <item name="android:minHeight">44dp</item>
-        <item name="android:paddingStart">18dp</item>
-        <item name="android:paddingEnd">18dp</item>
-        <item name="android:stateListAnimator">@null</item>
-        <item name="android:background">@drawable/bg_btn</item>
-    </style>
-
-    <style name="Widget.JumpA11y.Button.Accent">
-        <item name="android:textColor">@color/accent</item>
-        <item name="android:background">@drawable/bg_btn_accent</item>
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>

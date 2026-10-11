@@ -17,15 +17,20 @@ import android.widget.Toast
  *
  * ## 为什么是两个窗口
  *
- * 最早只做了一个全屏浮层，结果它把所有触摸都吃掉了，游戏根本没法玩。
- * 所以拆成两个：
+ * 最早只做了一个全屏浮层，结果它把所有触摸都吃掉了，游戏根本没法玩。所以拆成两个：
  *
- *   - 选点层：全屏，平时带 FLAG_NOT_TOUCHABLE，触摸直接穿到游戏上；
- *             只有点【选点】之后的一小会儿才接收触摸。
+ *   - 选点层：全屏。平时带 FLAG_NOT_TOUCHABLE，触摸直接穿到游戏上；
+ *             只有正在选点的时候才接收触摸。
  *   - 控制栏：屏幕底部一小条，一直能点。
  *
- * 好处是浮层开着的时候游戏照常能玩，只有选点那几秒钟会挡一下 —— 而那几秒游戏本来就
- * 在等人按，不动。
+ * ## 选点的流转
+ *
+ *   beginPicking -> 等用户点一下（粗选）
+ *                -> 点落在手指位置，然后进入"微调"状态，等【确定】
+ *                -> 【确定】之后锁住这个点，轮到下一个
+ *                -> 起点和终点都确定后，控制栏变成【跳】
+ *
+ * 校准就是多一步：跳完之后再确定一个"实际落点"。
  *
  * ## 几条自己定的规矩
  *
@@ -67,7 +72,7 @@ class JumpAccessibilityService : AccessibilityService() {
     /** 选点层是不是正在接触摸。 */
     private var picking = false
 
-    /** 是不是在走校准流程（选两个点 -> 跳一次 -> 点落点）。 */
+    /** 是不是在走校准流程。 */
     private var calibrating = false
 
     /** 防止两次注入叠在一起。 */
@@ -89,8 +94,7 @@ class JumpAccessibilityService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        // 只当心跳用。有时候用户在主界面点"显示浮层"时服务还没连上，
-        // 等收到事件再补建一次。
+        // 只当心跳用。有时候用户在主界面点"显示浮层"时服务还没连上。
         if (overlayRequested && canvas == null) {
             try { showOverlay() } catch (t: Throwable) { Log.e(TAG, "heartbeat showOverlay", t) }
         }
@@ -130,6 +134,7 @@ class JumpAccessibilityService : AccessibilityService() {
                 listener = object : ControlPanel.Listener {
                     override fun onStartPicking() = safely { beginPicking() }
                     override fun onStartCalibration() = safely { beginCalibration() }
+                    override fun onConfirm() = safely { confirmStaged() }
                     override fun onJump() = safely { onJumpPressed() }
                     override fun onReset() = safely { resetPoints() }
                     override fun onHide() = safely {
@@ -165,7 +170,6 @@ class JumpAccessibilityService : AccessibilityService() {
 
             windowManager.addView(c, cParams)
             addedCanvas = c
-
             windowManager.addView(p, pParams)
 
             canvas = c
@@ -203,7 +207,7 @@ class JumpAccessibilityService : AccessibilityService() {
     /**
      * 切换选点层是"穿透"还是"接触摸"。
      *
-     * 这个操作当安全关键处理：如果本来想设成可触摸、结果更新失败，就退回穿透状态，
+     * 当安全关键处理：如果本来想设成可触摸、结果更新失败，就退回穿透，
      * 免得用户被困在点不动的屏幕上。
      */
     private fun setCanvasTouchable(touchable: Boolean) {
@@ -228,17 +232,17 @@ class JumpAccessibilityService : AccessibilityService() {
 
     // ---------------------------------------------------------------- 流程
 
-    /** 正常流程：选两个点，然后跳。 */
+    /** 正常流程：选起点、选终点，然后跳。 */
     private fun beginPicking() {
         val c = canvas ?: return
         c.clearAll()
         calibrating = false
         picking = true
         setCanvasTouchable(true)
-        panel?.renderPicking(expectsStart = true)
+        panel?.renderAwaitingTap(SelectionCanvas.Stage.START)
     }
 
-    /** 校准流程：选两个点，跳一次，再点落点。 */
+    /** 校准流程：先选起点终点，跳一次，再确定实际落点。 */
     private fun beginCalibration() {
         val c = canvas ?: return
         c.clearAll()
@@ -248,6 +252,7 @@ class JumpAccessibilityService : AccessibilityService() {
         panel?.renderCalibrationIntro()
     }
 
+    /** 【重选】：把已经选的都清掉，回到待机。 */
     private fun resetPoints() {
         val c = canvas ?: return
         c.clearAll()
@@ -257,31 +262,44 @@ class JumpAccessibilityService : AccessibilityService() {
         panel?.renderIdle()
     }
 
+    /** 【确定】：锁住当前正在微调的点，轮到下一个。 */
+    private fun confirmStaged() {
+        val c = canvas ?: return
+        val stageBefore = c.stage
+        val confirmed = c.confirmStaged() ?: return
+
+        Log.i(TAG, "confirmed $stageBefore at (${confirmed.x}, ${confirmed.y})")
+
+        when (stageBefore) {
+            SelectionCanvas.Stage.START -> {
+                // 起点定了，继续选终点；选点层继续接触摸
+                panel?.renderAwaitingTap(SelectionCanvas.Stage.END)
+            }
+            SelectionCanvas.Stage.END -> {
+                // 两个点都齐了，停止拦触摸，游戏可以正常玩
+                picking = false
+                setCanvasTouchable(false)
+                panel?.renderReady(c.startPoint, c.endPoint)
+            }
+            SelectionCanvas.Stage.LANDING -> {
+                picking = false
+                setCanvasTouchable(false)
+                finishCalibration(c.startPoint, c.endPoint, c.landingPoint)
+            }
+        }
+    }
+
     private fun onPointsChangedSafely() {
         safely { onPointsChanged() }
     }
 
     private fun onPointsChanged() {
         val c = canvas ?: return
-        val s = c.startPoint
-        val e = c.endPoint
-        val l = c.landingPoint
-
-        // 校准：三个点都齐了就算系数
-        if (calibrating && s != null && e != null && l != null) {
-            finishCalibration(s, e, l)
-            return
-        }
-
-        when {
-            s == null -> panel?.renderPicking(expectsStart = true)
-            e == null -> panel?.renderPicking(expectsStart = false)
-            else -> {
-                // 两个点都齐了，就别再拦触摸了，游戏要能正常玩
-                picking = false
-                setCanvasTouchable(false)
-                panel?.renderReady(s, e)
-            }
+        // 只根据"有没有正在微调的点"切换面板状态
+        if (c.hasStaged) {
+            panel?.renderAdjusting(c.stage)
+        } else {
+            panel?.renderAwaitingTap(c.stage)
         }
     }
 
@@ -323,20 +341,22 @@ class JumpAccessibilityService : AccessibilityService() {
         inject(s.x, s.y, ms) { _, ok ->
             if (ok) {
                 canvas?.prepareForLanding()
-                setCanvasTouchable(true)          // 接住"点落点"那一下
-                panel?.renderAwaitingLanding()
+                setCanvasTouchable(true)          // 接住"标落点"那一下
+                picking = true
+                panel?.renderAwaitingTap(SelectionCanvas.Stage.LANDING)
             } else {
                 panel?.renderMessage(getString(R.string.cal_failed_inject))
                 calibrating = false
+                picking = false
                 setCanvasTouchable(false)         // 别忘了恢复穿透
             }
         }
     }
 
     private fun finishCalibration(
-        s: JumpCalculator.Point,
-        e: JumpCalculator.Point,
-        l: JumpCalculator.Point
+        s: JumpCalculator.Point?,
+        e: JumpCalculator.Point?,
+        l: JumpCalculator.Point?
     ) {
         calibrating = false
         picking = false

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  深色主题。颜色名跟 values/colors.xml 完全对应，系统切到深色时自动用这一套。
+-->
+<resources>
+    <!-- 背景层 -->
+    <color name="bg">#FF0B0E13</color>
+    <color name="surface">#FF141A22</color>
+    <color name="surface_hi">#FF1C232D</color>
+    <color name="stroke">#FF232C38</color>
+
+    <!-- 文字三级 -->
+    <color name="text">#FFE6EDF3</color>
+    <color name="text_dim">#FF8B98A5</color>
+    <color name="text_faint">#FF5C6773</color>
+
+    <!-- 强调色和状态色。深底上要提亮 -->
+    <color name="accent">#FF6EE7F5</color>
+    <color name="accent_soft">#1A6EE7F5</color>
+    <color name="accent_line">#666EE7F5</color>
+    <color name="ok">#FF7BE0A8</color>
+    <color name="warn">#FFF5C97F</color>
+    <color name="bad">#FFF5857F</color>
+    <color name="bad_soft">#17F5857F</color>
+    <color name="bad_line">#66F5857F</color>
+
+    <!-- 按钮按下时的高亮 -->
+    <color name="ripple">#26FFFFFF</color>
+
+    <!-- 浮层专用 -->
+    <color name="overlay_scrim">#12000000</color>
+    <color name="overlay_label">#FFFFFFFF</color>
+    <color name="overlay_label_shadow">#CC000000</color>
+    <color name="overlay_halo">#99FFFFFF</color>
+    <color name="marker_start">#FF6EE7F5</color>
+    <color name="marker_end">#FFF5A97F</color>
+    <color name="marker_landing">#FF7BE0A8</color>
+</resources>

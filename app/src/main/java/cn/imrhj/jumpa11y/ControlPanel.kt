@@ -18,14 +18,16 @@ import androidx.core.content.ContextCompat
  * 单独开一个窗口，因为选点层大部分时间是穿透的（不接收触摸），按钮得留在另一个窗口里
  * 才能一直点得到 —— 特别是【退出】。就算选点层卡住了，这个按钮也能点。
  *
- * 按钮按状态显示，不会一次性全摆出来：
+ * 按状态只显示该显示的按钮：
  *
  *   待机    -> [选点] [校准] [退出]
- *   选点中  -> 提示文字                + [重选] [退出]
- *   就绪    -> 距离和时长               + [跳] [重选] [退出]
- *   校准中  -> 提示点落点               + [重选] [退出]
+ *   点起点  -> "点一下棋子"            + [重选] [退出]
+ *   调起点  -> "滑动微调，好了点确定"   + [确定] [重选] [退出]
+ *   点终点  -> "点一下目标方块"        + [重选] [退出]
+ *   调终点  -> "滑动微调，好了点确定"   + [确定] [重选] [退出]
+ *   就绪    -> 距离和时长              + [跳] [重选] [退出]
  *
- * 【跳】只有两个点都选好了才出现，待机时是隐藏且禁用的，避免乱点就跳出去。
+ * 【跳】只有两个点都确定了才出现；没确定之前是隐藏的，免得乱点就跳出去。
  */
 @SuppressLint("ViewConstructor")
 class ControlPanel(
@@ -36,6 +38,7 @@ class ControlPanel(
     interface Listener {
         fun onStartPicking()
         fun onStartCalibration()
+        fun onConfirm()
         fun onJump()
         fun onReset()
         fun onHide()
@@ -52,6 +55,7 @@ class ControlPanel(
 
     private val btnPick: Button
     private val btnCalibrate: Button
+    private val btnConfirm: Button
     private val btnJump: Button
     private val btnReset: Button
 
@@ -98,12 +102,14 @@ class ControlPanel(
 
         btnPick = makeButton(R.string.btn_pick, R.drawable.bg_btn_accent, R.color.accent) { listener?.onStartPicking() }
         btnCalibrate = makeButton(R.string.btn_calibrate, R.drawable.bg_btn, R.color.warn) { listener?.onStartCalibration() }
+        btnConfirm = makeButton(R.string.btn_confirm, R.drawable.bg_btn_accent, R.color.accent) { listener?.onConfirm() }
         btnJump = makeButton(R.string.btn_jump, R.drawable.bg_btn_accent, R.color.ok) { listener?.onJump() }
         btnReset = makeButton(R.string.btn_again, R.drawable.bg_btn, R.color.text_dim) { listener?.onReset() }
         val btnHide = makeButton(R.string.btn_hide, R.drawable.bg_btn_danger, R.color.bad) { listener?.onHide() }
 
         rowButtons.addView(btnPick)
         rowButtons.addView(btnCalibrate)
+        rowButtons.addView(btnConfirm)
         rowButtons.addView(btnJump)
         rowButtons.addView(btnReset)
         rowButtons.addView(btnHide)
@@ -134,40 +140,51 @@ class ControlPanel(
     fun renderIdle() {
         tvStatus.setText(R.string.ov_idle_hint)
         tvReadout.text = dashReadout()
-        setVisible(pick = true, calibrate = true, jump = false, reset = false)
-        btnJump.isEnabled = false
+        show(pick = true, calibrate = true, confirm = false, jump = false, reset = false)
         refreshCoeff()
     }
 
-    fun renderPicking(expectsStart: Boolean) {
-        tvStatus.setText(if (expectsStart) R.string.ov_step_start else R.string.ov_step_end)
+    /** 还没点，等用户粗选一个点。 */
+    fun renderAwaitingTap(stage: SelectionCanvas.Stage) {
+        tvStatus.setText(
+            when (stage) {
+                SelectionCanvas.Stage.START -> R.string.ov_pick_start
+                SelectionCanvas.Stage.END -> R.string.ov_pick_end
+                SelectionCanvas.Stage.LANDING -> R.string.cal_step_landing
+            }
+        )
         tvReadout.text = dashReadout()
-        setVisible(pick = false, calibrate = false, jump = false, reset = true)
-        btnJump.isEnabled = false
+        show(pick = false, calibrate = false, confirm = false, jump = false, reset = true)
         refreshCoeff()
     }
 
+    /** 粗选好了，等微调和确定。 */
+    fun renderAdjusting(stage: SelectionCanvas.Stage) {
+        tvStatus.setText(
+            when (stage) {
+                SelectionCanvas.Stage.START -> R.string.ov_adjust_start
+                SelectionCanvas.Stage.END -> R.string.ov_adjust_end
+                SelectionCanvas.Stage.LANDING -> R.string.ov_adjust_landing
+            }
+        )
+        tvReadout.text = dashReadout()
+        show(pick = false, calibrate = false, confirm = true, jump = false, reset = true)
+        refreshCoeff()
+    }
+
+    /** 两个点都确定了，可以跳。 */
     fun renderReady(start: JumpCalculator.Point?, end: JumpCalculator.Point?) {
         tvStatus.setText(R.string.ov_ready)
         tvReadout.text = readoutFor(start, end)
-        setVisible(pick = false, calibrate = false, jump = true, reset = true)
+        show(pick = false, calibrate = false, confirm = false, jump = true, reset = true)
         btnJump.isEnabled = true
-        refreshCoeff()
-    }
-
-    fun renderAwaitingLanding() {
-        tvStatus.setText(R.string.cal_step_landing)
-        tvReadout.text = dashReadout()
-        setVisible(pick = false, calibrate = false, jump = false, reset = true)
-        btnJump.isEnabled = false
         refreshCoeff()
     }
 
     fun renderCalibrationIntro() {
         tvStatus.setText(R.string.cal_short)
         tvReadout.text = dashReadout()
-        setVisible(pick = false, calibrate = false, jump = false, reset = true)
-        btnJump.isEnabled = false
+        show(pick = false, calibrate = false, confirm = false, jump = false, reset = true)
         refreshCoeff()
     }
 
@@ -181,9 +198,12 @@ class ControlPanel(
         btnJump.isEnabled = false
     }
 
-    private fun setVisible(pick: Boolean, calibrate: Boolean, jump: Boolean, reset: Boolean) {
+    private fun show(
+        pick: Boolean, calibrate: Boolean, confirm: Boolean, jump: Boolean, reset: Boolean
+    ) {
         btnPick.visibility = if (pick) View.VISIBLE else View.GONE
         btnCalibrate.visibility = if (calibrate) View.VISIBLE else View.GONE
+        btnConfirm.visibility = if (confirm) View.VISIBLE else View.GONE
         btnJump.visibility = if (jump) View.VISIBLE else View.GONE
         btnReset.visibility = if (reset) View.VISIBLE else View.GONE
     }
