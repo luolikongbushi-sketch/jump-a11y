@@ -35,11 +35,23 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnLight: Button
     private lateinit var btnDark: Button
 
+    /** 上次运行时无障碍是开着的 —— 用来区分"从来没开过"和"开过但被清掉了" */
+    private var accessibilityWasOn = false
+
+    /** 这次启动是不是刚升级过 */
+    private var justUpgraded = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // 主题必须在建界面之前定好，不然会闪一下旧配色
         ThemeSettings.applyStored(this)
         super.onCreate(savedInstanceState)
         store = CalibrationStore(this)
+
+        val currentVersion = appVersionCode()
+        justUpgraded = store.lastSeenVersionCode != 0 && store.lastSeenVersionCode != currentVersion
+        store.lastSeenVersionCode = currentVersion
+        accessibilityWasOn = JumpAccessibilityService.isEnabledInSystem(this)
+
         setContentView(buildUi())
     }
 
@@ -47,6 +59,13 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         // 用户可能刚从设置里回来，每次回前台都刷一下状态
         refreshStatus()
+    }
+
+    private fun appVersionCode(): Int = try {
+        @Suppress("DEPRECATION")
+        packageManager.getPackageInfo(packageName, 0).versionCode
+    } catch (t: Throwable) {
+        -1
     }
 
     // ---------------------------------------------------------------- 控件
@@ -83,13 +102,16 @@ class MainActivity : AppCompatActivity() {
         textSize = 15f
         isAllCaps = false
         letterSpacing = 0.02f
+        minWidth = 0; minimumWidth = 0
         minHeight = 0; minimumHeight = 0
+        gravity = Gravity.CENTER
         setTextColor(col(if (accent) R.color.accent else R.color.text))
         background = ContextCompat.getDrawable(
             this@MainActivity,
             if (accent) R.drawable.bg_btn_accent else R.drawable.bg_btn
         )
-        setPadding(dp(18), dp(13), dp(18), dp(13))
+        setPadding(dp(18), dp(14), dp(18), dp(14))
+        minimumHeight = dp(50)
         setOnClickListener { onClick() }
         layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
@@ -101,10 +123,13 @@ class MainActivity : AppCompatActivity() {
         textSize = 14f
         isAllCaps = false
         letterSpacing = 0.02f
+        minWidth = 0; minimumWidth = 0
         minHeight = 0; minimumHeight = 0
+        gravity = Gravity.CENTER
         setTextColor(col(R.color.text_dim))
         background = ContextCompat.getDrawable(this@MainActivity, R.drawable.bg_btn)
-        setPadding(dp(16), dp(11), dp(16), dp(11))
+        setPadding(dp(16), dp(13), dp(16), dp(13))
+        minimumHeight = dp(48)
         setOnClickListener { onClick() }
         layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             .apply { marginEnd = dp(10) }
@@ -116,13 +141,16 @@ class MainActivity : AppCompatActivity() {
         textSize = 14f
         isAllCaps = false
         letterSpacing = 0.02f
+        minWidth = 0; minimumWidth = 0
         minHeight = 0; minimumHeight = 0
+        gravity = Gravity.CENTER
         setTextColor(col(if (selected) R.color.accent else R.color.text_dim))
         background = ContextCompat.getDrawable(
             this@MainActivity,
             if (selected) R.drawable.bg_btn_accent else R.drawable.bg_btn
         )
-        setPadding(dp(16), dp(11), dp(16), dp(11))
+        setPadding(dp(16), dp(13), dp(16), dp(13))
+        minimumHeight = dp(48)
         setOnClickListener { onClick() }
         layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             .apply { marginEnd = dp(10) }
@@ -251,6 +279,12 @@ class MainActivity : AppCompatActivity() {
 
         root.addView(hairline())
 
+        // ---- 无障碍授权说明（这块是用户特意要求保留的行为，得讲清楚）----
+        root.addView(sectionTitle(R.string.main_perm_title))
+        root.addView(body(getString(R.string.main_perm_body)))
+
+        root.addView(hairline())
+
         // ---- 说明 ----
         root.addView(sectionTitle(R.string.main_warn_title))
         root.addView(body(getString(R.string.main_warn_body), 12.5f, R.color.text_faint))
@@ -264,13 +298,61 @@ class MainActivity : AppCompatActivity() {
 
     // ---------------------------------------------------------------- 动作
 
+    /**
+     * 刷新服务状态。
+     *
+     * 分几种情况，别混成两种：
+     *
+     *   - 系统里开着 + 服务连上了  -> 一切正常
+     *   - 系统里开着 + 还没连上    -> 是"正在启动"，不是"没开"。用户先开应用后开服务时会看到，
+     *                                别吓唬人家说没开。
+     *   - 系统里没开 + 以前开过    -> 被系统清掉了，要重新授权。这是本应用有意保留的行为：
+     *                                应用一旦被清出后台授权就失效，别人没法借它做手脚。
+     *   - 系统里没开 + 从来没开过  -> 就是还没开，引导用户去设置
+     *
+     * 判断"系统里开没开"要直接读设置，不能只看服务有没有回调过。
+     */
     private fun refreshStatus() {
-        val on = JumpAccessibilityService.isRunning
-        statusText.text = getString(if (on) R.string.status_ok else R.string.status_no)
-        statusHint.text = getString(if (on) R.string.status_hint_ok else R.string.status_hint_no)
-        statusDot.background?.setTint(col(if (on) R.color.ok else R.color.bad))
-        btnShowOverlay.isEnabled = on
-        btnShowOverlay.alpha = if (on) 1f else 0.45f
+        val enabledInSystem = JumpAccessibilityService.isEnabledInSystem(this)
+        val connected = JumpAccessibilityService.isRunning
+
+        when {
+            enabledInSystem && connected -> {
+                accessibilityWasOn = true
+                statusText.setText(R.string.status_ok)
+                statusHint.setText(R.string.status_hint_ok)
+                statusDot.background?.setTint(col(R.color.ok))
+            }
+
+            enabledInSystem -> {
+                accessibilityWasOn = true
+                statusText.setText(R.string.status_connecting)
+                statusHint.setText(R.string.status_hint_connecting)
+                statusDot.background?.setTint(col(R.color.warn))
+            }
+
+            justUpgraded -> {
+                statusText.setText(R.string.status_no)
+                statusHint.setText(R.string.status_hint_upgraded)
+                statusDot.background?.setTint(col(R.color.bad))
+            }
+
+            accessibilityWasOn -> {
+                statusText.setText(R.string.status_no)
+                statusHint.setText(R.string.status_hint_revoked)
+                statusDot.background?.setTint(col(R.color.bad))
+            }
+
+            else -> {
+                statusText.setText(R.string.status_no)
+                statusHint.setText(R.string.status_hint_no)
+                statusDot.background?.setTint(col(R.color.bad))
+            }
+        }
+
+        // 只要系统里开着就能显示浮层 —— 服务会自己连上来，不用干等
+        btnShowOverlay.isEnabled = enabledInSystem
+        btnShowOverlay.alpha = if (enabledInSystem) 1f else 0.45f
     }
 
     /**
@@ -282,10 +364,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun requestOverlay() {
-        if (!JumpAccessibilityService.isRunning) {
+        if (!JumpAccessibilityService.isEnabledInSystem(this)) {
             toast(getString(R.string.ov_not_ready))
             return
         }
+        // 就算服务这会儿还没连上也没关系：这个标记放着，服务一连上就会把浮层建起来
         JumpAccessibilityService.overlayRequested = true
         toast(getString(R.string.ov_shown))
         // 自己退到后台，让用户直接看到游戏和浮层

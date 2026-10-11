@@ -59,6 +59,21 @@ class JumpAccessibilityService : AccessibilityService() {
         /** 主界面点"显示浮层"时置上，服务连上或者收到事件后就来建浮层。 */
         @Volatile
         var overlayRequested: Boolean = false
+
+        /**
+         * 直接问系统：我们的无障碍服务到底有没有开着。
+         *
+         * 别只看 [isRunning] —— 那玩意只知道"服务有没有回调过我"。用户先开应用、系统后连服务的话，
+         * 界面就会显示成未启用，其实是好的。
+         */
+        fun isEnabledInSystem(context: android.content.Context): Boolean {
+            val expected = "${context.packageName}/${JumpAccessibilityService::class.java.name}"
+            val enabled = android.provider.Settings.Secure.getString(
+                context.contentResolver,
+                android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+            ) ?: return false
+            return enabled.split(':').any { it.equals(expected, ignoreCase = true) }
+        }
     }
 
     private val handler = Handler(Looper.getMainLooper())

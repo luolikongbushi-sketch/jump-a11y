@@ -10,8 +10,12 @@
 
     <string name="status_ok">服务状态：已启用</string>
     <string name="status_no">服务状态：未启用</string>
+    <string name="status_connecting">服务状态：正在连接…</string>
     <string name="status_hint_no">请先到「设置 → 无障碍」里启用本服务</string>
     <string name="status_hint_ok">服务正常，可以显示浮层了</string>
+    <string name="status_hint_connecting">系统里开着，服务正在启动，稍等两秒</string>
+    <string name="status_hint_revoked">服务被系统关掉了，需要重新开一次。这是故意设计的：只要应用被清出后台，授权就会失效，别的应用就没法借它做手脚</string>
+    <string name="status_hint_upgraded">刚更新过，无障碍授权被系统重置了，需要重新开一次</string>
 
     <string name="btn_open_settings">去开启无障碍服务</string>
     <string name="btn_show_overlay">显示浮层</string>
@@ -37,6 +41,9 @@
 
     <string name="main_warn_title">说明</string>
     <string name="main_warn_body">· 半自动：每次需要你选两个点\n· 只在你开了无障碍之后才工作，随时可以关\n· 没有联网权限，传不了任何数据\n· 不读屏幕内容，也没有截图功能</string>
+
+    <string name="main_perm_title">关于无障碍授权</string>
+    <string name="main_perm_body">这个应用的授权会在下面两种情况失效，需要重新开一次：\n\n· 把应用从后台清掉（划掉最近任务）\n· 安装新版本\n\n这是有意保留的：授权跟着应用存活，应用一被清掉权限就没了，别的应用没法借着它一直挂在后台做手脚。代价是每次重新用都要去设置里开一下。</string>
 
     <!-- ==================== 浮层 ==================== -->
     <string name="ov_idle_hint">点【选点】开始</string>
